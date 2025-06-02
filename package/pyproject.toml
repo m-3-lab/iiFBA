@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cobra-extensions"
+version = "0.1.0"
+description = "A set of tools and helpers for working with COBRApy models"
+authors = [
+    { name="Your Name", email="your.email@example.com" }
+]
+license = { text = "MIT" }
+readme = "README.md"
+requires-python = ">=3.8"
+
+dependencies = [
+    "cobra>=0.27.0",
+    "numpy>=1.21",
+    "pandas>=1.3"
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/cobra-extensions"
