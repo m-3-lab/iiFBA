@@ -258,3 +258,44 @@ def iifba(community_model, media, relative_abundance,
                 flux_log = pd.concat([flux_log,df_tt])
 
     return flux_log, F
+
+def aux_analysis(model):
+    """Calculate how well a model grows without metabolites.
+
+    Args:
+        model (cobra.Model): _description_
+
+    Returns:
+        essentials (np.Array): _description_
+    """
+    exchange = [] # Keep track of exchanges
+    relative_growth = [] # Keep track of relative growth rate (how well does the model grow without this metabolite vs with the metabolite)
+
+    # turn on model exchanges
+    for ex in model.exchanges:
+        ex.lower_bound = -1000
+        ex.upper_bound = 1000
+
+    # turn off O2 for base anaerobic growth
+    model.exchanges.get_by_id('EX_o2(e)').lower_bound = 0 # turn off oxygen uptake (anaerobic)
+
+    # calculate the base growth rate, with all nutrients available, using FBA
+    base_solution = model.slim_optimize() 
+    if base_solution < 0.01: # print a warning if the model didn't grow with all nutrients
+        print('base solution low')
+        
+    for ex in model.exchanges: # for each exchange reaction
+        ex_id = ex.id
+        
+        with model as model1: 
+            model1.reactions.get_by_id(ex_id).lower_bound = 0  # turn off uptake
+            aux_solution = model.slim_optimize()  # recalculate growth rate
+            rel_gro = (aux_solution-base_solution)/base_solution # calculate relative growth change
+            exchange.append(ex_id) # save exchange id
+            relative_growth.append(rel_gro) # save relative growth change
+
+    # Save essential metabolite ids for later (these are the metabolites that when removed cause a greater than 90% reduction in growth)
+    essential_inds = np.argwhere(np.array(relative_growth)<-0.9)
+    essentials = np.array(exchange)[essential_inds]
+
+    return essentials
