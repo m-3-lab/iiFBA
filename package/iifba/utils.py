@@ -1,4 +1,6 @@
 import matplotlib.pyplot as plt
+from importlib.resources import files
+import pathlib
 
 # create function for visuals
 def iifba_vis():
