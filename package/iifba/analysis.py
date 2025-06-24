@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from cobra.util.solver import linear_reaction_coefficients
 from .utils import input_validation
-from config import GROWTH_MIN_OBJ
+from .config import GROWTH_MIN_OBJ
 
 def init_iifba(models, media, iterations, m_vals=[1,1]):
     """Initalize storage objects (DataFrames) for iiFBA.
