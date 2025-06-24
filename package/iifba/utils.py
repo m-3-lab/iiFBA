@@ -65,11 +65,11 @@ def input_validation(models=None, media=None, iters=None, flow=None,
 		print("Relative abundances set to:", rel_abund)
 
 	if m_vals is not None:
-		if not isinstance(m_vals, np.ndarray) or len(m_vals) != 2:
+		m_vals = np.array(m_vals, dtype=int)
+		if len(m_vals) != 2:
 			raise ValueError("m_vals must be a list of two integers.")
 		if sum(m_vals > 0) != 2:
 			m_vals[m_vals <=0] = 1
-		m_vals = np.array(m_vals, dtype=int)
 		print("m_vals set to:", m_vals)
 	
 	if obj_percent is not None:
