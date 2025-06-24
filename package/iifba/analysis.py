@@ -337,7 +337,7 @@ def iipfba(models, media, rel_abund="Equal",
                 model = set_env(model, env_fluxes, iter, 0) # only 0 runs
 
                 # run optim
-                org_fluxes = run_pfba(model, org_idx, iter, org_fluxes)
+                org_fluxes = run_pfba(model, org_idx, iter, org_fluxes, rel_abund[org_idx])
                 
         # update fluxes
         env_fluxes = update_pfba_env(env_fluxes, org_fluxes, flow, rel_abund, iter)
