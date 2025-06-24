@@ -55,7 +55,7 @@ def input_validation(models=None, media=None, iters=None, flow=None,
 			raise ValueError("Relative abundances must be non-negative and sum to a positive value.")
 		if rel_abund.sum() != 1:
 			rel_abund = rel_abund / rel_abund.sum()
-		if rel_abund is "Equal":
+		if rel_abund == "Equal":
 			rel_abund = np.ones(len(models)) / len(models)
 		print("Relative abundances set to:", rel_abund)
 
