@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [tool.setuptools]
-package-models = { "iifba" = ["AGORA2_Models/*.mat"] }
+package-data = { "iifba" = ["AGORA2_Models/*.mat"] }
 
 [tool.setuptools.packages.find]
 include = ["iifba*"]
