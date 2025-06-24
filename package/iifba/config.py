@@ -7,8 +7,10 @@ GROWTH_MIN_OBJ = 0.01
 
 def load_example_model():
 	mat_path = files("iifba").joinpath("AGORA2_Models", "Escherichia_coli_str_K_12_substr_MG1655.mat")
-	print(mat_path)
-	example_ecoli = cb.io.load_matlab_model(str(mat_path))
+	example_EC = cb.io.load_matlab_model(str(mat_path))
+
+	mat_path = files("iifba").joinpath("AGORA2_Models", "Bacteroides_thetaiotaomicron_3731.mat")
+	example_EC = cb.io.load_matlab_model(str(mat_path))
 	
 	#ecoli example glucose minimal media
 	min_med_ids_ex = ['EX_glc_D(e)','EX_so4(e)','EX_nh4(e)','EX_no3(e)','EX_pi(e)','EX_cys_L(e)',
