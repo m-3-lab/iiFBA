@@ -284,7 +284,7 @@ def update_sampling_env(env_f, org_F, flow, rel_abund, iter, m_vals, Mi, rep_idx
 
     return env_f
 
-def iipfba(models, media, rel_abund=None,
+def iipfba(models, media, rel_abund="Equal",
            iters=10, flow=0.5):
     """Wrapper function for running iiFBA with parsimonious FBA (pFBA). This function initializes 
     the environment and organism fluxes, sets the exchange reactions for each model, runs pFBA,
