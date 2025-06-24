@@ -5,19 +5,3 @@ import pathlib
 
 GROWTH_MIN_OBJ = 0.01
 
-def load_example_models():
-	mat_path = files("iifba").joinpath("AGORA2_Models", "Escherichia_coli_str_K_12_substr_MG1655.mat")
-	example_EC = cb.io.load_matlab_model(str(mat_path))
-
-	mat_path = files("iifba").joinpath("AGORA2_Models", "Bacteroides_thetaiotaomicron_3731.mat")
-	example_BT = cb.io.load_matlab_model(str(mat_path))
-	
-	#ecoli example glucose minimal media
-	min_med_ids_ex = ['EX_glc_D(e)','EX_so4(e)','EX_nh4(e)','EX_no3(e)','EX_pi(e)','EX_cys_L(e)',
-				'EX_mn2(e)','EX_cl(e)','EX_ca2(e)','EX_mg2(e)','EX_cu2(e)','EX_cobalt2(e)','EX_fe2(e)','EX_fe3(e)','EX_zn2(e)','EX_k(e)']
-	# Define medium uptake flux bounds
-	min_med_fluxes_ex = [-10,-100,-100,-100,-100,-100,
-						-100,-100,-100,-100,-100,-100,-100,-100,-100,-100]
-	ecoli_media_example = dict(zip(min_med_ids_ex, min_med_fluxes_ex))
-	
-	return example_EC, example_BT, ecoli_media_example
