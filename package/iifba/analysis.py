@@ -229,7 +229,7 @@ def update_pfba_env(env_f, org_F, flow, rel_abund, iter):
     run_exs = org_F.loc[:, iter, 0][env_f.columns].to_numpy()
         
     # run update
-    flux_sums = run_exs.sum(axis=1)
+    flux_sums = run_exs.sum(axis=0)
     env_f.loc[iter+1, 0] = (1-flow)*(env_tmp - flux_sums) + flow*init_env
     
     return env_f
@@ -422,7 +422,7 @@ def iisampling(models, media, rel_abund, iters=10, flow=0.5, m_vals=[1,1], objec
                     model = set_env(model, env_fluxes, iter, Mi)
 
                     # run optim
-                    org_fluxes = run_sampling(model, org_idx, iter, org_fluxes, m_vals, rep_idx=rep_idx, obj_percent=objective_percent)
+                    org_fluxes = run_sampling(model, org_idx, iter, org_fluxes, rel_abund[org_idx] m_vals, rep_idx=rep_idx, obj_percent=objective_percent)
                 
         # update fluxes
         env_fluxes = update_sampling_env(env_fluxes, org_fluxes, flow, rel_abund, iter, m_vals, Mi, rep_idx)
