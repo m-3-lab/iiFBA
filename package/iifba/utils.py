@@ -51,7 +51,7 @@ def input_validation(models=None, media=None, iters=None, flow=None,
 		print("Flow set to:", flow)
 	
 	if rel_abund != None:
-		if isinstance(rel_abund, str)
+		if isinstance(rel_abund, str):
 			if rel_abund.lower() == "equal":
 				rel_abund = np.ones(len(models)) / len(models)
 		if not isinstance(rel_abund, np.ndarray):
