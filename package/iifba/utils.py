@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import cobra as cb
 from importlib.resources import files
 import pathlib
 
