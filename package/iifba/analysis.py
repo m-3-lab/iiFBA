@@ -422,7 +422,7 @@ def iisampling(models, media, rel_abund, iters=10, flow=0.5, m_vals=[1,1], objec
                     model = set_env(model, env_fluxes, iter, Mi)
 
                     # run optim
-                    org_fluxes = run_sampling(model, org_idx, iter, org_fluxes, rel_abund[org_idx] m_vals, rep_idx=rep_idx, obj_percent=objective_percent)
+                    org_fluxes = run_sampling(model, org_idx, iter, org_fluxes, rel_abund[org_idx], m_vals, rep_idx=rep_idx, obj_percent=objective_percent)
                 
         # update fluxes
         env_fluxes = update_sampling_env(env_fluxes, org_fluxes, flow, rel_abund, iter, m_vals, Mi, rep_idx)
