@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import cobra as cb
 from importlib.resources import files
+import numpy as np
 import pathlib
 
 # create function for visuals
