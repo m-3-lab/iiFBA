@@ -5,7 +5,7 @@ from importlib.resources import files
 GROWTH_MIN_OBJ = 0.01
 
 def load_example_model():
-	mat_path = files("cobra_extensions.data") / "Escherichia_coli_str_K_12_substr_MG1655.mat"
+	mat_path = files("iifba.data") / "Escherichia_coli_str_K_12_substr_MG1655.mat"
 	example_ecoli = cb.io.load_matlab_model(str(mat_path))
 	
 	#ecoli example glucose minimal media
