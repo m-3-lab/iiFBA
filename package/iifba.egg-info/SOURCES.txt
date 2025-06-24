@@ -1,0 +1,12 @@
+README.md
+pyproject.toml
+iifba/__init__.py
+iifba/analysis.py
+iifba/config.py
+iifba/utils.py
+iifba.egg-info/PKG-INFO
+iifba.egg-info/SOURCES.txt
+iifba.egg-info/dependency_links.txt
+iifba.egg-info/requires.txt
+iifba.egg-info/top_level.txt
+iifba/AGORA2_Models/Escherichia_coli_str_K_12_substr_MG1655.mat
