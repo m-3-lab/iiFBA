@@ -97,7 +97,7 @@ def set_env(model, env_f, iter, run):
     
     return model
 
-def run_pfba(model, model_idx, iter, org_F):
+def run_pfba(model, model_idx, iter, org_F, rel_abund):
     """General function to run parsimonious FBA (pFBA) on a model and store the results.
     This function runs pFBA on a given model, checks if the solution is above a minimum growth objective,
     and stores the resulting fluxes in the provided DataFrame.
@@ -113,6 +113,9 @@ def run_pfba(model, model_idx, iter, org_F):
         org_F (pandas.DataFrame): 
             DataFrame to store the fluxes from pFBA. It is multi-indexed by model index, 
             iteration, and run.
+        rel_abund (float):
+            Float value between 0 and 1, representing the relative abundance of the bacteria for the 
+            given model.
 
     Returns:
         org_F (pandas.DataFrame): 
@@ -124,12 +127,12 @@ def run_pfba(model, model_idx, iter, org_F):
     if sol1 > GROWTH_MIN_OBJ:
         sol = cb.flux_analysis.parsimonious.pfba(model)
         
-        org_F.loc[(model_idx, iter, 0), list(sol.fluxes.index)] = sol.fluxes.values
+        org_F.loc[(model_idx, iter, 0), list(sol.fluxes.index)] = rel_abund * sol.fluxes.values
     # do nothing otherwise - already initiated as zeros!
 
     return org_F
 
-def run_sampling(model, model_idx, iter, org_F, m_vals, rep_idx, obj_percent):
+def run_sampling(model, model_idx, iter, org_F, rel_abund, m_vals, rep_idx, obj_percent):
     """Funtion to run flux sampling on a model and store the results.
         
     Args:
@@ -143,6 +146,9 @@ def run_sampling(model, model_idx, iter, org_F, m_vals, rep_idx, obj_percent):
         org_F (pandas.DataFrame): 
             DataFrame to store the fluxes from pFBA. It is multi-indexed by model index, 
             iteration, and run.
+        rel_abund (float):
+            Float value between 0 and 1, representing the relative abundance of the bacteria for the 
+            given model.
         m_vals (list type of ints, length 2): 
             List of two integers representing the number of sampling runs (starting points)
             and the number of samples taken per sample run/starting point. If integers are not provided,
@@ -180,7 +186,7 @@ def run_sampling(model, model_idx, iter, org_F, m_vals, rep_idx, obj_percent):
     multi_idx = pd.MultiIndex.from_tuples(tuples, names=['model', 'Iteration', 'Run'])
     sol.index = multi_idx
     
-    org_F.loc[sol.index, sol.columns] = sol
+    org_F.loc[sol.index, sol.columns] = rel_abund * sol
 
     return org_F
 
@@ -223,7 +229,7 @@ def update_pfba_env(env_f, org_F, flow, rel_abund, iter):
     run_exs = org_F.loc[:, iter, 0][env_f.columns].to_numpy()
         
     # run update
-    flux_sums = (run_exs.T @ rel_abund).flatten()
+    flux_sums = run_exs.sum(axis=1)
     env_f.loc[iter+1, 0] = (1-flow)*(env_tmp - flux_sums) + flow*init_env
     
     return env_f
