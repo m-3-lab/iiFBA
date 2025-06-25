@@ -4,9 +4,44 @@ from importlib.resources import files
 import numpy as np
 import pathlib
 
-# create function for visuals
-def iifba_vis():
-    return
+def iifba_vis(F, ax=None, 
+			  line_lab=None):
+	"""Plot the cumulative flux values from iifba results. 
+
+	This function returns a matplotlib Axes object with the cumulative flux,
+	which can be customized further or used for overlaying on other plots.
+	Change colors or other attributes of the lines with:
+	
+	lines = ax.get_lines() # Get all lines on the axes
+	lines[0].set_color('red') # For example, change the color of the first line
+
+	Args:
+		F (1D array-like): 
+			Flux values to be plotted. Flux values should be in the 
+			form of a 1D array or series, where each value corresponds to
+			flux of a reaction at a specific iteration.
+		ax (matplotlib.axes.Axes, optional): 
+			Matplotlib Axes to plot iifba results. 
+			Defaults to None.
+		line_lab (str, optional): 
+			In case of overlaying plot, used for labeling lines. Defaults to None.
+
+	Returns:
+		ax (matplotlib.axes.Axes, optional): 
+			Matplotlib Axes to plot iifba results. Returns for saving or
+			further customization or overlaying on other plots.
+	"""
+	if ax is None:
+		_, ax = plt.subplots(1,1)
+	
+	ax.plot(np.cumsum(F), label=line_lab)
+	ax.set_ylabel("Cumulative Flux")
+	ax.set_xlabel("Iteration")
+
+	if line_lab is not None:
+		ax.legend()
+	
+	return ax
 
 def store(path, type="pkl"):
     return 
