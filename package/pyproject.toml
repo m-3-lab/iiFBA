@@ -23,7 +23,7 @@ dependencies = [
 Homepage = "https://m-3-lab.github.io"
 
 [tool.setuptools]
-package-data = { "iifba" = ["AGORA2_Models/*.mat"] }
+package-data = { "iifba" = ["AGORA2_Models/*.mat", "Simple_Models/*.json"] }
 
 [tool.setuptools.packages.find]
 include = ["iifba*"]
