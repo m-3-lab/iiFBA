@@ -50,7 +50,7 @@ def load_simple_models(number):
 		raise ValueError("Number must be between 1 and {}.".format(len(situation_models)))
 	
 	models = []
-	for file_idx, file_name in enumerate(situation_models[number - 1]):
+	for file_name in situation_models[number - 1]:
 		model_path = files("iifba").joinpath("Simple_Models", file_name)
 		models.append(cb.io.load_json_model(str(model_path)))
 	
