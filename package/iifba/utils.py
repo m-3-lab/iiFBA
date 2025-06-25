@@ -46,15 +46,18 @@ def load_simple_models(number):
 		["sit_IV_1.json", "sit_IV_2.json"],
 		["sit_V_1.json", "sit_V_2.json"]
 	]
-	if number < 1 or number > len(situation_models):
-		raise ValueError("Number must be between 1 and {}.".format(len(situation_models)))
+
+	if number != 4:
+		situation_media = {"Ex_A": -10}
+	else:
+		situation_media = {"Ex_A": -10, "Ex_B": -10}
 	
 	models = []
 	for file_name in situation_models[number - 1]:
 		model_path = files("iifba").joinpath("Simple_Models", file_name)
 		models.append(cb.io.load_json_model(str(model_path)))
 	
-	return models
+	return models, media
 
 def input_validation(models=None, media=None, iters=None, flow=None, 
 					 rel_abund=None, m_vals=None, obj_percent=None):
