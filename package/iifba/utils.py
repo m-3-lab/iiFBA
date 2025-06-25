@@ -11,6 +11,17 @@ def iifba_vis():
 def store(path, type="pkl"):
     return 
 def load_example_models():
+	"""Load real bacteria models for testing purposes.
+
+	Returns:
+		example_EC: cobra.Model
+			Escherichia coli str. K-12 substr. MG1655 model.
+		example_BT: cobra.Model
+			Bacteroides thetaiotaomicron 3731 model.
+		ecoli_media_example: dict
+			Example glucose minimal media for E. coli, with reaction IDs 
+			as keys and flux values as
+	"""
 	mat_path = files("iifba").joinpath("AGORA2_Models", "Escherichia_coli_str_K_12_substr_MG1655.mat")
 	example_EC = cb.io.load_matlab_model(str(mat_path))
 
@@ -27,6 +38,23 @@ def load_example_models():
 	
 	return example_EC, example_BT, ecoli_media_example
 
+def load_simple_models(number):
+	situation_models = [
+		["sit_I.json"],
+		["sit_II.json"],
+		["sit_III_1.json", "sit_III_2.json"],
+		["sit_IV_1.json", "sit_IV_2.json"],
+		["sit_V_1.json", "sit_V_2.json"]
+	]
+	if number < 1 or number > len(situation_models):
+		raise ValueError("Number must be between 1 and {}.".format(len(situation_models)))
+	
+	models = []
+	for file_idx, file_name in enumerate(situation_models[number - 1]):
+		model_path = files("iifba").joinpath("Simple_Models", file_name)
+		models.append(cb.io.load_json_model(str(model_path)))
+	
+	return models
 
 def input_validation(models=None, media=None, iters=None, flow=None, 
 					 rel_abund=None, m_vals=None, obj_percent=None):
