@@ -57,7 +57,7 @@ def load_simple_models(number):
 		model_path = files("iifba").joinpath("Simple_Models", file_name)
 		models.append(cb.io.load_json_model(str(model_path)))
 	
-	return models, media
+	return models, situation_media
 
 def input_validation(models=None, media=None, iters=None, flow=None, 
 					 rel_abund=None, m_vals=None, obj_percent=None):
