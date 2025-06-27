@@ -83,15 +83,15 @@ def load_simple_models(number):
 		["sit_VI_1.json", "sit_VI_2.json"]
 	]
 
-	if number < 4:
+	if number in [1,3,5]: # A only in media 
 		situation_media = {"Ex_A": -10}
-	elif number == 4:
+	elif number in [4]:
 		situation_media = {"Ex_A": -10, "Ex_B": -10}
-	elif number == 5:
+	elif number in [6]:
 		situation_media = {"Ex_A": -10, "Ex_C": -10}
 	
 	models = []
-	for file_name in situation_models[number - 1]:
+	for file_name in situation_models[number -1]:
 		model_path = files("iifba").joinpath("Simple_Models", file_name)
 		models.append(cb.io.load_json_model(str(model_path)))
 	
