@@ -79,13 +79,16 @@ def load_simple_models(number):
 		["sit_II.json"],
 		["sit_III_1.json", "sit_III_2.json"],
 		["sit_IV_1.json", "sit_IV_2.json"],
-		["sit_V_1.json", "sit_V_2.json"]
+		["sit_V_1.json", "sit_V_2.json"],
+		["sit_VI_1.json", "sit_VI_2.json"]
 	]
 
-	if number != 4:
+	if number < 4:
 		situation_media = {"Ex_A": -10}
-	else:
+	elif number == 4:
 		situation_media = {"Ex_A": -10, "Ex_B": -10}
+	elif number == 5:
+		situation_media = {"Ex_A": -10, "Ex_C": -10}
 	
 	models = []
 	for file_name in situation_models[number - 1]:
