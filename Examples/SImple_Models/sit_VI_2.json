@@ -28,7 +28,7 @@
 ],
 "reactions":[
 {
-"id":"Ex_A",
+"id":"Ex_C",
 "name":"",
 "metabolites":{
 "C_e":-1
@@ -94,7 +94,7 @@
 }
 ],
 "genes":[],
-"id":"Org1",
+"id":"Org2",
 "compartments":{
 "c":"",
 "e":""

@@ -83,7 +83,7 @@ def load_simple_models(number):
 		["sit_VI_1.json", "sit_VI_2.json"]
 	]
 
-	situation_media = dict({})
+	situation_media = None
 	if number in [1,3,5]: # A only in media 
 		situation_media = {"Ex_A": -10}
 	elif number in [2, 4]:
