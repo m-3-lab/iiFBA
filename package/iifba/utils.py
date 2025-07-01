@@ -98,7 +98,7 @@ def load_simple_models(number):
 	
 	return models, situation_media
 
-def input_validation(models=None, media=None, iters=None, flow=None, 
+def input_validation(models=None, media=None, iters=None, 
 					 rel_abund=None, m_vals=None, obj_percent=None):
 	if models is not None and not isinstance(models, list):
 		raise ValueError("models must be a list of cobra.Model objects.")
@@ -112,13 +112,6 @@ def input_validation(models=None, media=None, iters=None, flow=None,
 		if iters < 1:
 			iters = 1
 		print("Iterations set to:", iters)
-	
-	if flow is not None:
-		if not isinstance(flow, float):
-			flow = float(flow)
-		if flow < 0 or flow > 1:
-			flow = 0.5
-		print("Flow set to:", flow)
 	
 	if rel_abund != None:
 		if isinstance(rel_abund, str):

@@ -204,11 +204,6 @@ def update_pfba_env(env_f, org_F, flow, rel_abund, iter):
         org_F (pandas.DataFrame): 
             DataFrame to store the fluxes from pFBA. It is multi-indexed by model index, 
             iteration, and run.
-        flow (float): 
-            Float representing the "flow rate" for updating the environment fluxes. "Flow rate" 
-            is unitless and a ratio representing the proportion of initial environment fluxes that 
-            are retained in the updated environment fluxes, simulating a flow of nutrients.
-            Should be between 0 and 1. If not between 0 and 1, it will default to 0.5.
         rel_abund (np.ndarray of floats): 
             Relative abundances of the organisms in the environment. This is used to weight the
             contributions of each organism's fluxes to the environment fluxes. The sum of all values
@@ -222,15 +217,13 @@ def update_pfba_env(env_f, org_F, flow, rel_abund, iter):
         env_f (pandas.DataFrame): 
             DataFrame containing the updated environment fluxes for each iteration and run.
     """
-    # get initial env. for flow
-    init_env = env_f.loc[0,0].to_numpy()
     #pull iter info
     env_tmp = env_f.loc[iter, 0][:].to_numpy()
     run_exs = org_F.loc[:, iter, 0][env_f.columns].to_numpy()
         
     # run update
     flux_sums = run_exs.sum(axis=0)
-    env_f.loc[iter+1, 0] = (1-flow)*(env_tmp - flux_sums) + flow*init_env
+    env_f.loc[iter+1, 0] = env_tmp - flux_sums
     
     return env_f
 
@@ -247,11 +240,6 @@ def update_sampling_env(env_f, org_F, flow, rel_abund, iter, m_vals, Mi, rep_idx
         org_F (pandas.DataFrame): 
             DataFrame to store the fluxes from Flux Sampling. It is multi-indexed by model index, 
             iteration, and run.
-        flow (float): 
-            Float representing the "flow rate" for updating the environment fluxes. "Flow rate" 
-            is unitless and a ratio representing the proportion of initial environment fluxes that 
-            are retained in the updated environment fluxes, simulating a flow of nutrients.
-            Should be between 0 and 1. If not between 0 and 1, it will default to 0.5.
         rel_abund (np.ndarray of floats): 
             Relative abundances of the organisms in the environment. This is used to weight the
             contributions of each organism's fluxes to the environment fluxes. The sum of all values
@@ -275,8 +263,6 @@ def update_sampling_env(env_f, org_F, flow, rel_abund, iter, m_vals, Mi, rep_idx
         env_f (pandas.DataFrame): 
             DataFrame containing the updated environment fluxes for each iteration and run.
     """
-    # get initial env. for flow
-    init_env = env_f.loc[(0,0)].to_numpy()
 
     sample_ct = m_vals[0] * m_vals[1] if iter == 0 else m_vals[1]
     for sample_idx in range(sample_ct):
@@ -286,12 +272,12 @@ def update_sampling_env(env_f, org_F, flow, rel_abund, iter, m_vals, Mi, rep_idx
 
         # run update
         flux_sums = (run_exs.T @ rel_abund).flatten()
-        env_f.loc[iter+1, sample_idx+ m_vals[1]*rep_idx] = (1-flow)*(env_tmp - flux_sums) + flow*init_env
+        env_f.loc[iter+1, sample_idx+ m_vals[1]*rep_idx] = env_tmp - flux_sums
 
     return env_f
 
 def iipfba(models, media, rel_abund="Equal",
-           iters=10, flow=0.5):
+           iters=10):
     """Wrapper function for running iiFBA with parsimonious FBA (pFBA). This function initializes 
     the environment and organism fluxes, sets the exchange reactions for each model, runs pFBA,
     and updates the environment fluxes based on the results of pFBA. It returns the
@@ -311,11 +297,6 @@ def iipfba(models, media, rel_abund="Equal",
         iters (int, optional): 
             Integer value for number of iterations to run. If value is less than 1, iters will default 
             to 1. Decimals will be rounded down to nearest integer. Defaults to 10.
-        flow (float): 
-            Float representing the "flow rate" for updating the environment fluxes. "Flow rate" 
-            is unitless and a ratio representing the proportion of initial environment fluxes that 
-            are retained in the updated environment fluxes, simulating a flow of nutrients.
-            Should be between 0 and 1. If not between 0 and 1, it will default to 0.5.
 
     Returns:
         env_f (pandas.DataFrame): 
@@ -324,7 +305,7 @@ def iipfba(models, media, rel_abund="Equal",
             DataFrame to store the fluxes from pFBA. It is multi-indexed by model index &  
             iteration.
     """
-    models, media, iters, flow, rel_abund, _, _ = input_validation(models, media, iters, flow, rel_abund)
+    models, media, iters, rel_abund, _, _ = input_validation(models, media, iters, rel_abund)
 
     env_fluxes, org_fluxes = init_iifba(models, media, iters)
 
@@ -340,7 +321,7 @@ def iipfba(models, media, rel_abund="Equal",
                 org_fluxes = run_pfba(model, org_idx, iter, org_fluxes, rel_abund[org_idx])
                 
         # update fluxes
-        env_fluxes = update_pfba_env(env_fluxes, org_fluxes, flow, rel_abund, iter)
+        env_fluxes = update_pfba_env(env_fluxes, org_fluxes, rel_abund, iter)
 
     # pfba has no use for Run index
     env_fluxes = env_fluxes.droplevel("Run")
@@ -348,7 +329,7 @@ def iipfba(models, media, rel_abund="Equal",
 
     return env_fluxes, org_fluxes
 
-def iisampling(models, media, rel_abund, iters=10, flow=0.5, m_vals=[1,1], objective_percent= 0.9):
+def iisampling(models, media, rel_abund, iters=10, m_vals=[1,1], objective_percent= 0.9):
     """Wrapper function for running iiFBA with flux sampling. This function initializes the environment 
     and organism fluxes, sets the exchange reactions for each model, runs flux sampling, and updates the environment fluxes
     based on the results of the flux sampling. It returns the updated environment fluxes, organism
@@ -368,11 +349,6 @@ def iisampling(models, media, rel_abund, iters=10, flow=0.5, m_vals=[1,1], objec
         iters (int, optional): 
             Integer value for number of iterations to run. If value is less than 1, iters will default 
             to 1. Decimals will be rounded down to nearest integer. Defaults to 10.
-        flow (float): 
-            Float representing the "flow rate" for updating the environment fluxes. "Flow rate" 
-            is unitless and a ratio representing the proportion of initial environment fluxes that 
-            are retained in the updated environment fluxes, simulating a flow of nutrients.
-            Should be between 0 and 1. If not between 0 and 1, it will default to 0.5.
         m_vals (list type of ints, length 2): 
             List of two positive integers representing the number of sampling runs (starting points)
             and the number of samples taken per sample run/starting point. If decimals are provided,
@@ -425,7 +401,7 @@ def iisampling(models, media, rel_abund, iters=10, flow=0.5, m_vals=[1,1], objec
                     org_fluxes = run_sampling(model, org_idx, iter, org_fluxes, rel_abund[org_idx], m_vals, rep_idx=rep_idx, obj_percent=objective_percent)
                 
         # update fluxes
-        env_fluxes = update_sampling_env(env_fluxes, org_fluxes, flow, rel_abund, iter, m_vals, Mi, rep_idx)
+        env_fluxes = update_sampling_env(env_fluxes, org_fluxes, rel_abund, iter, m_vals, Mi, rep_idx)
 
 
     return env_fluxes, org_fluxes, M
