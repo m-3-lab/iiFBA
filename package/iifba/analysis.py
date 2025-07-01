@@ -191,12 +191,10 @@ def run_sampling(model, model_idx, iter, org_F, rel_abund, m_vals, rep_idx, obj_
     return org_F
 
     
-def update_pfba_env(env_f, org_F, flow, rel_abund, iter):
+def update_pfba_env(env_f, org_F, rel_abund, iter):
     """Function to update the environment fluxes based on the results of pFBA.
     This function calculates the new environment fluxes by taking into account the
     contributions of each organism's fluxes, weighted by their relative abundances.
-    It simulates a "flow" of nutrients in the environment, where a certain proportion
-    of the initial environment fluxes is retained in the updated environment fluxes.
 
     Args:
         env_f (pandas.DataFrame): 
@@ -227,12 +225,10 @@ def update_pfba_env(env_f, org_F, flow, rel_abund, iter):
     
     return env_f
 
-def update_sampling_env(env_f, org_F, flow, rel_abund, iter, m_vals, Mi, rep_idx):
+def update_sampling_env(env_f, org_F, rel_abund, iter, m_vals, Mi, rep_idx):
     """Function to update the environment fluxes based on the results of flux sampling.
     This function calculates the new environment fluxes by taking into account the
     contributions of each organism's fluxes, weighted by their relative abundances.
-    It simulates a "flow" of nutrients in the environment, where a certain proportion
-    of the initial environment fluxes is retained in the updated environment fluxes.
 
     Args:
         env_f (pandas.DataFrame): 
@@ -371,7 +367,7 @@ def iisampling(models, media, rel_abund, iters=10, m_vals=[1,1], objective_perce
             The values in the matrix are the indices of the sampling runs (starting points) for that
             iteration. The first column (0th index) is the initial sampling run (starting point) for the first iteration.
     """
-    models, media, iters, flow, rel_abund, m_vals, objective_percent = input_validation(models, media, iters, flow, rel_abund, m_vals, objective_percent)
+    models, media, iters, rel_abund, m_vals, objective_percent = input_validation(models, media, iters, rel_abund, m_vals, objective_percent)
 
     # mapping of what flux sampling to iterate
     M = np.zeros([m_vals[0],iters],dtype=int) #randomly pre-assign sampling initial point matrix
