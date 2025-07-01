@@ -84,9 +84,9 @@ def load_simple_models(number):
 	]
 
 	situation_media = None
-	if number in [1,3,5]: # A only in media 
+	if number in [1, 2, 3,5]: # A only in media 
 		situation_media = {"Ex_A": -10}
-	elif number in [2, 4]:
+	elif number in [4]:
 		situation_media = {"Ex_A": -10, "Ex_B": -10}
 	elif number in [6]:
 		situation_media = {"Ex_A": -10, "Ex_C": -10}
