@@ -142,4 +142,4 @@ def input_validation(models=None, media=None, iters=None,
 			obj_percent = 0.9
 		print("Objective percent set to:", obj_percent)
 		
-	return models, media, iters, flow, rel_abund, m_vals, obj_percent
+	return models, media, iters, rel_abund, m_vals, obj_percent
