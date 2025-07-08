@@ -93,9 +93,10 @@ def set_env(model, env_f, iter, run, abundance):
             Ready for running optimization or sampling for iiFBA analysis.
     """
     for ex in model.exchanges:
-        ex.lower_bound = -(1/abundance) * env_f.loc[iter, run][ex.id]
+        ex.lower_bound = (1/abundance) * env_f.loc[iter, run][ex.id]
 
     return model
+
 
 def run_pfba(model, model_idx, iter, org_F, rel_abund):
     """General function to run parsimonious FBA (pFBA) on a model and store the results.
@@ -220,7 +221,7 @@ def update_pfba_env(env_f, org_F, rel_abund, iter):
     run_exs = org_F.loc[:, iter, 0][env_f.columns].to_numpy()
         
     # run update
-    flux_sums = run_exs.sum(axis=0)
+    flux_sums = rel_abund.T @ run_exs
     env_f.loc[iter+1, 0] = env_tmp - flux_sums
     
     return env_f
