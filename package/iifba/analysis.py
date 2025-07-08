@@ -221,7 +221,7 @@ def update_pfba_env(env_f, org_F, rel_abund, iter):
     run_exs = org_F.loc[:, iter, 0][env_f.columns].to_numpy()
     
     # update rate
-    update_rate = rel_abund
+    update_rate = np.linalg.norm(rel_abund)
 
     # run update
     flux_sums = update_rate.T @ run_exs
