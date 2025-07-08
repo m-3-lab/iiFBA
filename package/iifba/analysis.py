@@ -73,7 +73,7 @@ def init_iifba(models, media, iterations, m_vals=[1,1]):
     
     return env_f, org_F
 
-def set_env(model, env_f, iter, run):
+def set_env(model, env_f, iter, run, abundance):
     """Function to set the exhcange reachtions of a model to match the environment fluxes
     for a given iteration and run. This is mainly provided to ensure a cleaner wrapper function.
 
@@ -93,8 +93,8 @@ def set_env(model, env_f, iter, run):
             Ready for running optimization or sampling for iiFBA analysis.
     """
     for ex in model.exchanges:
-        ex.lower_bound = env_f.loc[iter, run][ex.id]
-    
+        ex.lower_bound = abundance * env_f.loc[iter, run][ex.id]
+
     return model
 
 def run_pfba(model, model_idx, iter, org_F, rel_abund):
@@ -311,7 +311,7 @@ def iipfba(models, media, rel_abund="Equal",
         for org_idx, org_model in enumerate(models):
             with org_model as model:
                 # set exchanges
-                model = set_env(model, env_fluxes, iter, 0) # only 0 runs
+                model = set_env(model, env_fluxes, iter, 0, rel_abund[org_idx]) # only 0 runs
 
                 # run optim
                 org_fluxes = run_pfba(model, org_idx, iter, org_fluxes, rel_abund[org_idx])
