@@ -222,6 +222,7 @@ def update_pfba_env(env_f, org_F, rel_abund, iter):
         
     # run update
     flux_sums = (rel_abund).T @ run_exs
+    flux_sums = (np.array([1,1])).T @ run_exs
     env_f.loc[iter+1, 0] = env_tmp - flux_sums
     
     return env_f
