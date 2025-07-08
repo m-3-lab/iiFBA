@@ -219,13 +219,16 @@ def update_pfba_env(env_f, org_F, rel_abund, iter):
     #pull iter info
     env_tmp = env_f.loc[iter, 0][:].to_numpy()
     run_exs = org_F.loc[:, iter, 0][env_f.columns].to_numpy()
-        
+    
+    # update rate
+    update_rate = rel_abund
+
     # run update
-    flux_sums = run_exs.sum(axis=0)
+    flux_sums = update_rate.T @ run_exs
     env_f.loc[iter+1, 0] = env_tmp - flux_sums
     
     return env_f
-    
+
 
 
 def update_sampling_env(env_f, org_F, rel_abund, iter, m_vals, Mi, rep_idx):
