@@ -93,7 +93,7 @@ def set_env(model, env_f, iter, run, abundance):
             Ready for running optimization or sampling for iiFBA analysis.
     """
     for ex in model.exchanges:
-        ex.lower_bound = abundance * env_f.loc[iter, run][ex.id]
+        ex.lower_bound = (1/abundance) * env_f.loc[iter, run][ex.id]
 
     return model
 
