@@ -47,7 +47,7 @@ def init_iifba(models, media, iterations, m_vals=[1,1]):
     env_f = np.zeros((rows, cols))
     env0_masks = [np.array(list(org_exs)) == rxn_id for rxn_id in list(media.keys()) ]
     for flux_idx, flux in enumerate(list(media.values())):
-        env_f[0][env0_masks[flux_idx]] = flux
+        env_f[0][env0_masks[flux_idx]] = -flux
     
     #set columns for multi-indexing
     iters_col = np.repeat(np.arange(1, iterations+1), m_vals[0] * m_vals[1]) 
