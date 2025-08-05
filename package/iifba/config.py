@@ -1,2 +1,5 @@
 GROWTH_MIN_OBJ = 0.01
+ROUND = 6
+
+V_MAX = 10
 

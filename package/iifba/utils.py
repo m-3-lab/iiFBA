@@ -2,7 +2,8 @@ import matplotlib.pyplot as plt
 import cobra as cb
 from importlib.resources import files
 import numpy as np
-import pathlib
+import pandas as pd
+import os
 
 def iifba_vis(F, ax=None, 
 			  line_lab=None):
@@ -75,16 +76,17 @@ def load_example_models():
 
 def load_simple_models(number):
 	situation_models = [
-		["sit_I.json"],
-		["sit_II.json"],
-		["sit_III_1.json", "sit_III_2.json"],
-		["sit_IV_1.json", "sit_IV_2.json"],
-		["sit_V_1.json", "sit_V_2.json"],
-		["sit_VI_1.json", "sit_VI_2.json"]
+		["sim_I.json"],
+		["sim_II.json"],
+		["sim_III_1.json", "sim_III_2.json"],
+		["sim_IV_1.json", "sim_IV_2.json"],
+		["sim_V_1.json", "sim_V_2.json"],
+		["sim_VI_1.json", "sim_VI_2.json"],
+		["sim_VII_1.json", "sim_VII_2.json"]
 	]
 
 	situation_media = None
-	if number in [1, 2, 3,5]: # A only in media 
+	if number in [1, 2, 3,5, 7]: # A only in media 
 		situation_media = {"Ex_A": -10}
 	elif number in [4]:
 		situation_media = {"Ex_A": -10, "Ex_B": -10}
@@ -113,10 +115,9 @@ def input_validation(models=None, media=None, iters=None,
 			iters = 1
 		print("Iterations set to:", iters)
 	
-	if rel_abund != None:
+	if rel_abund is not None:
 		if isinstance(rel_abund, str):
-			if rel_abund.lower() == "equal":
-				rel_abund = np.ones(len(models)) / len(models)
+			rel_abund = np.ones(len(models)) / len(models)
 		if not isinstance(rel_abund, np.ndarray):
 			rel_abund = np.array(rel_abund)
 		if rel_abund.ndim != 1:
@@ -143,3 +144,80 @@ def input_validation(models=None, media=None, iters=None,
 		print("Objective percent set to:", obj_percent)
 		
 	return models, media, iters, rel_abund, m_vals, obj_percent
+
+def check_rel_abund(rel_abund, n_models):
+	if rel_abund is None:
+		rel_abund = np.ones(n_models) / n_models
+	elif isinstance(rel_abund, str):
+		rel_abund = np.ones(n_models) / n_models
+	elif not isinstance(rel_abund, np.ndarray):
+		rel_abund = np.array(rel_abund)
+	if rel_abund.ndim != 1:
+		rel_abund = rel_abund.flatten()
+	if rel_abund.shape[0] != n_models:
+		raise ValueError(f"Relative abundances must be a 1D array of length {n_models}.")
+	if np.any(rel_abund < 0) or np.sum(rel_abund) == 0:
+		raise ValueError("Relative abundances must be non-negative and sum to a positive value.")
+	if rel_abund.sum() != 1:
+		rel_abund = rel_abund / rel_abund.sum()
+		print("Relative abundances set to:", rel_abund)
+
+	rel_abund = rel_abund.astype(float).reshape(-1, 1)
+	return rel_abund
+
+def check_iters(iters):
+	if iters is None:
+		iters = 10
+	elif not isinstance(iters, int):
+		iters = int(iters)
+	if iters < 1:
+		iters = 1
+		print("Iterations set to:", iters)
+	
+	return iters
+
+def check_media(media):
+	if media is None:
+		media = {}
+	elif not isinstance(media, dict):
+		raise ValueError("Media must be a dictionary with reaction IDs as keys and flux values as values.")
+	
+	for rxn_id, flux in media.items():
+		if not isinstance(rxn_id, str):
+			raise ValueError(f"Reaction ID {rxn_id} must be a string.")
+		if not isinstance(flux, (int, float)):
+			raise ValueError(f"Flux value for reaction {rxn_id} must be a number.")
+	
+	return media
+
+def check_models(models):
+	if models is None:
+		raise ValueError("Models must be provided as a list of cobra.Model objects or single cobra.Model.")
+
+	elif not isinstance(models, (list, cb.Model)):
+		raise ValueError("Models must be provided as a list of cobra.Model objects or single cobra.Model.")
+	else:
+		if isinstance(models, cb.Model):
+			models = [models]
+
+	for model in models:
+		if not isinstance(model, cb.Model):
+			raise ValueError(f"Model {model} is not a valid cobra.Model object.")
+	
+	return models
+
+def check_objective(objective):
+	if objective is None:
+		objective = "pfba"
+	elif not isinstance(objective, str):
+		raise ValueError("Objective must be a string, either 'pfba' or 'fba'.")
+	else:
+		if isinstance(objective, str):
+			if objective.lower() == "pfba":
+				objective = "pfba"
+			elif objective.lower() == "fba":
+				objective = "fba"
+			else:
+				raise ValueError("Objective must be either 'pfba' or 'fba'.")
+
+	return objective

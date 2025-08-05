@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from cobra.util.solver import linear_reaction_coefficients
 from .utils import input_validation
-from .config import GROWTH_MIN_OBJ
+from .config import GROWTH_MIN_OBJ, V_MAX
 
 def init_iifba(models, media, iterations, m_vals=[1,1]):
     """Initalize storage objects (DataFrames) for iiFBA.
@@ -73,8 +73,8 @@ def init_iifba(models, media, iterations, m_vals=[1,1]):
     
     return env_f, org_F
 
-def set_env(model, env_f, iter, run, abundance):
-    """Function to set the exhcange reachtions of a model to match the environment fluxes
+def set_env(model, low_bounds, columns):
+    """Function to set the exhcange reactions of a model to match the environment fluxes
     for a given iteration and run. This is mainly provided to ensure a cleaner wrapper function.
 
     Args:
@@ -92,9 +92,12 @@ def set_env(model, env_f, iter, run, abundance):
             The updated COBRApy model with exchange reactions set to the environment fluxes.
             Ready for running optimization or sampling for iiFBA analysis.
     """
-    for ex in model.exchanges:
-        ex.lower_bound = -(1/abundance) * env_f.loc[iter, run][ex.id]
+    print(columns.shape)
+    print(low_bounds.shape)
 
+    for ex in model.exchanges:
+        ex.lower_bound = -low_bounds[columns == ex.id]
+        print(ex.id, ex.lower_bound)
     return model
 
 
@@ -141,7 +144,7 @@ def run_sampling(model, model_idx, iter, org_F, rel_abund, m_vals, rep_idx, obj_
             The COBRApy model to run pFBA on.
         model_idx (int): 
             Integer representing the index of the model in the list of models. Used for 
-            indexing in the DataFrame.
+            indexing in the DataFrame.+
         iter (int): 
             Integer representing the current iteration of iiFBA.
         org_F (pandas.DataFrame): 
@@ -192,7 +195,7 @@ def run_sampling(model, model_idx, iter, org_F, rel_abund, m_vals, rep_idx, obj_
     return org_F
 
     
-def update_pfba_env(env_f, org_F, rel_abund, iter):
+def update_pfba_env(env_f, org_F, rel_abund, update_rate, iter):
     """Function to update the environment fluxes based on the results of pFBA.
     This function calculates the new environment fluxes by taking into account the
     contributions of each organism's fluxes, weighted by their relative abundances.
@@ -216,19 +219,34 @@ def update_pfba_env(env_f, org_F, rel_abund, iter):
         env_f (pandas.DataFrame): 
             DataFrame containing the updated environment fluxes for each iteration and run.
     """
-    #pull iter info
-    env_tmp = env_f.loc[iter, 0][:].to_numpy()
-    run_exs = org_F.loc[:, iter, 0][env_f.columns].to_numpy()
+    round_digits = 6
+    #pull iter info and establish array shapes
+    env_tmp = env_f.loc[iter, 0][:].to_numpy().reshape(-1, 1)   # (row, col) = (n_ex, 1)     # uptake = positive
+    run_exs = org_F.loc[:, iter, 0][env_f.columns].to_numpy().T # (row, col) = (n_ex, n_org) # uptake = negative flux
+    rel_abund = rel_abund.reshape(-1, 1) # (n_org, ) -> (n_org, 1) 
     
-    # update rate
-    update_rate = np.ones_like(rel_abund) # rel_abund
+    # get org fluxes
+    total_org_flux = run_exs.sum(axis=1).reshape(-1, 1) # (n_ex, n_org) -> (n_ex, 1) sum across orgs
 
+    # check if environment fluxes are under-saturated
+    over_shoot = np.zeros_like(total_org_flux)
+    over_shoot[env_tmp != 0] = -total_org_flux[np.abs(env_tmp) >= 1e-6] / env_tmp[np.abs(env_tmp) >= 1e-6]
+    print("Overshoot", over_shoot.max().round(round_digits))
 
-    # run update
-    flux_sums = update_rate.T @run_exs
-    env_f.loc[iter+1, 0] = env_tmp + flux_sums
+    # check if iteration uses more flux than available in environment
+    if over_shoot.max().round(round_digits) <= 1:
+        env_f.loc[iter+1, 0] = (env_tmp + total_org_flux).flatten().round(round_digits) # (n_ex, 1) + (n_ex, 1) -> (n_ex, 1) 
+        is_under, update_rate = True, None
+    else:
+        ex_over = np.argmax(over_shoot) # index of flux causing over-shoot
+        print(update_rate.shape)
+        update_rate = (run_exs * env_tmp[ex_over, -1]) / (run_exs[ex_over, :] @ rel_abund)  # (n_org, ) / scalar -> (n_org, ) # total is never zero if overshoot
+        print(update_rate.shape)
+        update_rate = update_rate.T
+        is_under = False
     
-    return env_f
+
+    return is_under, update_rate, env_f
 
 
 
@@ -304,7 +322,8 @@ def iipfba(models, media, rel_abund="Equal",
     Returns:
         env_f (pandas.DataFrame): 
             DataFrame containing the environment fluxes for each iteration.
-        org_F (pandas.DataFrame): 
+        org_F (pandas.DataFrame):         update_rate = run_exs[ex_over, :] / total_org_flux[ex_over, :] # (n_org, ) / scalar -> (n_org, ) # total is never zero if overshoot
+
             DataFrame to store the fluxes from pFBA. It is multi-indexed by model index &  
             iteration.
     """
@@ -315,20 +334,28 @@ def iipfba(models, media, rel_abund="Equal",
     for iter in range(iters):
         print("Iteration:", iter)
 
-        for org_idx, org_model in enumerate(models):
-            with org_model as model:
-                # set exchanges
-                model = set_env(model, env_fluxes, iter, 0, rel_abund[org_idx]) # only 0 runs
+        is_under = False
+        low_bounds =  np.tile(env_fluxes.loc[iter, 0].to_numpy(), (len(rel_abund), 1))  # initialize update rate (used to scale ex flux bounds)
+        for org_idx in range(len(rel_abund)):
+            low_bounds[org_idx, :] = low_bounds[org_idx, :] / rel_abund[org_idx]
+        
+        exchanges = env_fluxes.columns.to_numpy()
+        while not(is_under): # run until environment fluxes are under-saturated
+            print(is_under, low_bounds)
+            for org_idx, org_model in enumerate(models):
+                with org_model as model:
+                    # set exchanges
+                    model = set_env(model, low_bounds[org_idx], exchanges) # only 0 runs
 
-                # run optim
-                org_fluxes = run_pfba(model, org_idx, iter, org_fluxes, rel_abund[org_idx])
-                
-        # update fluxes
-        env_fluxes = update_pfba_env(env_fluxes, org_fluxes, rel_abund, iter)
+                    # run optim
+                    org_fluxes = run_pfba(model, org_idx, iter, org_fluxes, rel_abund[org_idx])
+
+            # update fluxes
+            is_under, low_bounds, env_fluxes = update_pfba_env(env_fluxes, org_fluxes, rel_abund, low_bounds, iter)
 
     # pfba has no use for Run index
     env_fluxes = env_fluxes.droplevel("Run")
-    org_fluxes =org_fluxes.droplevel("Run")
+    org_fluxes = org_fluxes.droplevel("Run")
 
     return env_fluxes, org_fluxes
 
