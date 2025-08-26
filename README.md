@@ -2,4 +2,4 @@
 
 Creating an API for CobraPy to use iiFBA
 
-pip install git+https://github.com/<your-username>/<your-repo>.git
+pip install "git+https://github.com/m-3-lab/iiFBA.git@main#subdirectory=package"
