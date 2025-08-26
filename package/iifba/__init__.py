@@ -1,10 +1,7 @@
-from .analysis import iipfba, iisampling, aux_analysis
-from .utils import iifba_vis
+from .utils import iifba_vis, plot_sampling
 from .community import Community
 
-__all__ = ["iipfba",
-           "iisampling",
-           "aux_analysis",
+__all__ = ["Community",
            "iifba_vis",
-           "Community"  
+           "plot_sampling"
            ]
