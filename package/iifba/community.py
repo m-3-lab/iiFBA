@@ -101,8 +101,11 @@ class Community:
         multi_idx = [models_col, iters_col , run_col]
         self.org_fluxes = pd.DataFrame(self.org_fluxes, columns=self.org_rxns, index=multi_idx)	# convert to interprettable df
         self.org_fluxes.index.names = ["Model", "Iteration", "Run"]
-        
-        return 
+
+        # store model names
+        self.model_names = {model_idx: model.name for model_idx, model in enumerate(self.models)}
+
+        return
 
     def set_env(self, model_idx, low_bounds):
         """Function to set the exhcange reactions of a model to match the environment fluxes
@@ -229,12 +232,10 @@ class Community:
 
         return self.env_fluxes, self.org_fluxes
     
-    def summary(self, iter_shown=None):
-        summary = CommunitySummary(self, iter_shown)
+    def summarize(self, iter_shown=None):
+        self.summary = CommunitySummary(self, iter_shown)
 
-        return summary
-    
-    
+        return self.summary
 
     def run_sampling(self, model_idx, iter, rep_idx, Mi, runs_over):
         # add minimum growth constraint to model

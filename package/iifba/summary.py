@@ -36,13 +36,14 @@ class CommunitySummary:
             self.iter_shown = community.iters - 1
 
         # pull cumulative organism fluxes
-        self.flux = community.org_fluxes.copy()
+        self.community = community
+        self.flux = self.community.org_fluxes.copy()
         self.flux = self.flux.groupby(level='Model').cumsum()
         self.flux = self.flux.xs(self.iter_shown, level='Iteration')
 
         # extract objectives and create expressions to print
-        self.objective = community.objective
-        self.objective_rxns = community.objective_rxns
+        self.objective = self.community.objective
+        self.objective_rxns = self.community.objective_rxns
         self.objective_vals = [self.flux.loc[model, rxn] for model, rxn in self.objective_rxns.items()]
         self.objective_expressions = [f"1.0 * {rxn} = {self.objective_vals[model]}" for model, rxn in self.objective_rxns.items()]
 
@@ -51,16 +52,16 @@ class CommunitySummary:
         self.objective_total_expression = f"Sum(Model_i Biomass) = {self.objective_total}"
 
         # create summary dataframe for overall community
-        self.env_flux = community.env_fluxes.loc[self.iter_shown].copy() - community.env_fluxes.loc[0]
+        self.env_flux = self.community.env_fluxes.loc[self.iter_shown].copy() - self.community.env_fluxes.loc[0]
         self.env_flux = self.env_flux.reset_index()
         self.env_flux.columns = ["Exchange", "Flux"]
 
         # add metabolite to env_flux
-        self.env_flux["Metabolite"] = self.env_flux["Exchange"].map(community.ex_to_met)
+        self.env_flux["Metabolite"] = self.env_flux["Exchange"].map(self.community.ex_to_met)
         self.env_flux = self.env_flux.set_index("Metabolite")
 
         # add element information
-        metabolites = {m.id: m for m in community.exchange_metabolites}
+        metabolites = {m.id: m for m in self.community.exchange_metabolites}
         self.env_flux[f"{element}-Number"] = [
             metabolites[met_id].elements.get(element, 0) if met_id in metabolites else 0
             for met_id in self.env_flux.index
@@ -75,7 +76,7 @@ class CommunitySummary:
         self.env_flux = self.env_flux[self.env_flux['Flux'] != 0] # remove zero fluxes
 
         # create dfs for organisms
-        self.flux = self.flux[community.org_exs].copy()
+        self.flux = self.flux[self.community.org_exs].copy()
         self.flux = self.flux.reset_index()
         self.flux.columns = ["Model"] + list(self.flux.columns[1:])
         self.flux = pd.melt(
@@ -84,12 +85,12 @@ class CommunitySummary:
             var_name="Exchange", 
             value_name="Flux"
         )
-        self.flux["Metabolite"] = self.flux["Exchange"].map(community.ex_to_met)
+        self.flux["Metabolite"] = self.flux["Exchange"].map(self.community.ex_to_met)
         self.flux["Metabolite"] = self.flux["Metabolite"].fillna(self.flux["Exchange"])
         self.flux = self.flux.set_index(["Model", "Metabolite"])
 
         # add element information
-        metabolites = {m.id if pd.notnull(m.id) else m: m for m in community.exchange_metabolites}
+        metabolites = {m.id if pd.notnull(m.id) else m: m for m in self.community.exchange_metabolites}
         self.flux[f"{element}-Number"] = [
             metabolites[met_id].elements.get(element, 0) if met_id in metabolites else 0
             for met_id in self.flux.index.get_level_values("Metabolite")
@@ -104,7 +105,24 @@ class CommunitySummary:
         self.flux = self.flux[self.flux['Flux'] != 0] # remove zero fluxes
 
         return
-        
+    
+    def to_cytoscape(self):
+        # pull pertinent info for cytoscape edge table
+        self.cyto_edge = self.flux.reset_index()
+        self.cyto_edge["Source"] = self.cyto_edge["Model"].map(self.community.model_names)
+        self.cyto_edge["Target"] = self.cyto_edge["Metabolite"]
+        self.cyto_edge["Type"] = ["Uptake" if flux < 0 else "Secretion" for flux in self.cyto_edge["Flux"]]
+        self.cyto_edge["Value"] = self.cyto_edge["Flux"].abs()
+
+        # drop all other info
+        self.cyto_edge = self.cyto_edge[["Source", "Target", "Type", "Value"]]
+
+        # create cytoscape node table
+        self.cyto_node = self.cyto_edge[["Source", "Target"]]
+        self.cyto_node["Type"] = ["Organism" if name in self.community.model_names.values() else "Metabolite" for name in self.cyto_node["Source"]]
+
+        return self.cyto_edge, self.cyto_node
+
     def to_string(self):
         """Display the summary of the community."""
         output = []
@@ -190,6 +208,7 @@ class CommunitySummary:
 
         return html
 
+    
 
 
 class SamplingSummary:
