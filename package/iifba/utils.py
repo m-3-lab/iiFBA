@@ -229,21 +229,21 @@ def check_models(models):
 	
 	return models
 
-def check_objective(objective):
-	if objective is None:
-		objective = "pfba"
-	elif not isinstance(objective, str):
-		raise ValueError("Objective must be a string, either 'pfba' or 'fba'.")
+def check_method(method):
+	if method is None:
+		method = "pfba"
+	elif not isinstance(method, str):
+		raise ValueError("Method must be a string, either 'pfba' or 'fba'.")
 	else:
-		if isinstance(objective, str):
-			if objective.lower() == "pfba":
-				objective = "pfba"
-			elif objective.lower() == "fba":
-				objective = "fba"
+		if isinstance(method, str):
+			if method.lower() == "pfba":
+				method = "pfba"
+			elif method.lower() == "fba":
+				method = "fba"
 			else:
-				raise ValueError("Objective must be either 'pfba' or 'fba'.")
+				raise ValueError("method must be either 'pfba' or 'fba'.")
 
-	return objective
+	return method
 
 def check_sampling_inputs(community, m_vals):
 	if m_vals is None:
