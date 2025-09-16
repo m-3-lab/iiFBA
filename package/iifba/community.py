@@ -22,7 +22,8 @@ class Community:
         self.rel_abund = utils.check_rel_abund(rel_abund, self.size)
         self.iters = utils.check_iters(iters)
         self.objective = utils.check_objective(objective)
-        self.id = None # for plotting
+        """delete self.id- but check for compatibility"""
+        self.id = None # 
         # get obj rxn ids
         model_obj_rxns = []
         for model in self.models:
@@ -144,23 +145,37 @@ class Community:
         #pull iter info and establish array shapes
         env_tmp = self.env_fluxes.loc[iter, 0][:].to_numpy().reshape(-1, 1)   # (row, col) = (n_ex, 1)     # uptake = positive
         run_exs = self.org_fluxes.loc[:, iter, 0][self.env_fluxes.columns].to_numpy().T # (row, col) = (n_ex, n_org) # uptake = negative flux
-        #self.rel_abund  # (n_org, ) -> (n_org, 1)
+        #self.rel_abund  # (n_org, 1)
 
         # get org fluxes
         total_org_flux = run_exs.sum(axis=1).reshape(-1, 1) # (n_ex, n_org) -> (n_ex, 1) sum across orgs
 
         # check if environment fluxes are under-saturated
-        over_shoot = np.zeros_like(total_org_flux)
-        over_shoot[env_tmp != 0] = -total_org_flux[np.abs(env_tmp) >= 1e-6] / env_tmp[np.abs(env_tmp) >= 1e-6]
+        is_overconsumed = np.zeros_like(total_org_flux)
+        is_overconsumed[env_tmp != 0] = -total_org_flux[np.abs(env_tmp) >= 1e-6] / env_tmp[np.abs(env_tmp) >= 1e-6]
 
         # check if iteration uses more flux than available in environment
-        if over_shoot.max().round(ROUND) <= 1:
+        if is_overconsumed.max().round(ROUND) <= 1:
             self.env_fluxes.loc[iter+1, 0] = (env_tmp + total_org_flux).flatten().round(ROUND) # (n_ex, 1) + (n_ex, 1) -> (n_ex, 1) 
             is_under, update_rate = True, None
         else:
-            ex_over = np.argmax(over_shoot) # index of flux causing over-shoot
-            update_rate = (run_exs * env_tmp[ex_over, -1]) / (run_exs[ex_over, :] @ self.rel_abund)  #
-            update_rate = update_rate.T
+            ex_over = np.argmax(is_overconsumed) # index of flux causing over-consumed
+            # adjust only over-consumed bound
+            print(self.env_fluxes.columns[ex_over], "over-consumed by :", max(is_overconsumed))
+            print("fnij*:", env_tmp[ex_over, -1])
+            print("V'nij*:", run_exs[ex_over, :])
+            print("fnij* dot V'nij*:", env_tmp[ex_over, -1]* run_exs[ex_over, :])
+            print("V*nij*:", update_rate[:, ex_over])
+            update_rate[:, ex_over] = (env_tmp[ex_over, -1] * run_exs[ex_over, :] / (run_exs[ex_over, :] @ self.rel_abund)).T #
+            print("V*nij*:", update_rate[:, ex_over])
+            # adjust all bounds
+            # update_rate = (np.outer(env_tmp.flatten(), run_exs[ex_over, :])) / (run_exs[ex_over, :] @ self.rel_abund)  #
+            # update_rate = update_rate.T
+
+            # adjust all bounds
+            # update_rate = (run_exs * env_tmp[ex_over, -1]) / (run_exs[ex_over, :] @ self.rel_abund)  #
+            # update_rate = update_rate.T
+            # print(update_rate.shape)
             is_under = False
 
         return is_under, update_rate
@@ -225,7 +240,6 @@ class Community:
                     iter = self.iters
                     if self.v: print("Convergence achieved.")
             
-
         # pfba has no use for Run index
         self.env_fluxes = self.env_fluxes.droplevel("Run")
         self.org_fluxes = self.org_fluxes.droplevel("Run")

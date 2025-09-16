@@ -3,6 +3,7 @@ pyproject.toml
 iifba/__init__.py
 iifba/community.py
 iifba/config.py
+iifba/iifba_object.py
 iifba/summary.py
 iifba/utils.py
 iifba.egg-info/PKG-INFO
