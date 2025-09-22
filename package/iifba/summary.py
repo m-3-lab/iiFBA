@@ -15,7 +15,7 @@ class CommunitySummary:
         
         # initialize attributes
         self.iter_shown = None
-        self.objective = None
+        self.method = None
         self.objective_rxns = None
         self.objective_vals = None
         self.objective_total = None
@@ -42,7 +42,7 @@ class CommunitySummary:
         self.flux = self.flux.xs(self.iter_shown, level='Iteration')
 
         # extract objectives and create expressions to print
-        self.objective = self.community.objective
+        self.method = self.community.method
         self.objective_rxns = self.community.objective_rxns
         self.objective_vals = [self.flux.loc[model, rxn] for model, rxn in self.objective_rxns.items()]
         self.objective_expressions = [f"1.0 * {rxn} = {self.objective_vals[model]}" for model, rxn in self.objective_rxns.items()]
@@ -53,7 +53,7 @@ class CommunitySummary:
 
         # create summary dataframe for overall community
         self.env_flux = self.community.env_fluxes.loc[self.iter_shown].copy() - self.community.env_fluxes.loc[0]
-        self.env_flux = self.env_flux.reset_index()
+        self.env_flux = self.env_flux.T.reset_index()
         self.env_flux.columns = ["Exchange", "Flux"]
 
         # add metabolite to env_flux
@@ -127,7 +127,7 @@ class CommunitySummary:
         """Display the summary of the community."""
         output = []
         output.append(f"Community Summary (Cumulative through Iteration {self.iter_shown}):\n")
-        output.append(f"Optimization Type: {self.objective}\n")
+        output.append(f"Optimization Type: {self.method}\n")
         output.append(f"{self.objective_total_expression}\n\n")
         output.append("Uptake:\n")
         uptake = self.env_flux[self.env_flux['Flux'] < 0].copy()
@@ -162,7 +162,7 @@ class CommunitySummary:
 
     def _repr_html_(self):
         html = f"<h3>Community Summary (Cumulative through Iteration {self.iter_shown})</h3>"
-        html += f"<b>Optimization Type:</b> {self.objective}<br>"
+        html += f"<b>Optimization Type:</b> {self.method}<br>"
         html += f"{self.objective_total_expression}<br>"
 
         # Community Uptake Table
