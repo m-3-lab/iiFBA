@@ -15,6 +15,14 @@ class iifbaObject:
         self.rel_abund = utils.check_rel_abund(rel_abund, self.size)
         self.id = id
 
+        # get obj rxn ids
+        model_obj_rxns = []
+        for model in self.models:
+            obj_rxn = linear_reaction_coefficients(model).keys()
+            model_obj_rxns.extend([rxn.id for rxn in obj_rxn])
+        self.objective_rxns = dict(zip(range(self.size), 
+                                      model_obj_rxns))
+
     def run_iifba(self, iters, method, early_stop=True, v=False):
         """_summary_
         Run the iifba algorithm
@@ -33,7 +41,19 @@ class iifbaObject:
             if self.v: print("Iteration:", iter)
 
             # update media for the iteration
+            self.is_rerun = False # reset re-run flag for overconsumption
             self.update_media(iter)
+
+            # check early stopping condition
+            if self.early_stop:
+                if self.v: print("Checking Convergence...")
+                delta = self.env_fluxes.loc[iter+1, 0] - self.env_fluxes.loc[iter, 0]
+                if np.all(np.abs(delta) < 1e-6):
+                    # copy last iter to all future iters
+                    self.env_fluxes.loc[(slice(iter+1, None),0), :] = self.env_fluxes.loc[(iter,0), :].values
+
+                    if self.v: print("Converged at iteration", iter)
+                    break
 
         # drop run col
         self.org_fluxes = self.org_fluxes.droplevel("Run")
@@ -43,6 +63,7 @@ class iifbaObject:
     def create_vars(self, m_vals=[1,1]):
         """Initialize variables for iiFBA.
         This function sets up the optimization variables for the iiFBA analysis.
+
         """
         self.m_vals = m_vals # default to [1,1] for community iifba, can be set to [n, m] for sampling via iifba_sampling m_vals arg
 
@@ -110,17 +131,16 @@ class iifbaObject:
 
         return
         
+
     def update_media(self, iter ):
         """
         Update the media (f_n,j) for each iteration
+        f_{n+1, j} = f_{n,j} + sum(V_{n,i,j})
         """
-        # define env bounds per organism for the current iteration
-        env_bounds =  np.tile(self.env_fluxes.loc[iter, 0].to_numpy(), (self.size, 1))  # initialize update rate (used to scale ex flux bounds)
-        for org_idx in range(self.size):
-            env_bounds[org_idx, :] = env_bounds[org_idx, :] / self.rel_abund[org_idx]
+
 
         # run organism flux function
-        self.flux_function(iter, env_bounds)
+        self.flux_function(iter)
 
         # update media: f_n+1 = f_n - sum(v_nij)
         env_tmp = self.env_fluxes.loc[iter, 0][:].to_numpy().reshape(-1, 1)   # (row, col) = (n_ex, 1)     # uptake = positive
@@ -132,26 +152,32 @@ class iifbaObject:
 
         return
 
-    def flux_function(self, iter, env_bounds):
+    def flux_function(self, iter):
         """
         run through flux function for organisms
         """
+        # # define env bounds per organism for the current iteration
+        if not(self.is_rerun): # if first run of iteration, just initialize scaled by rel abund only otherwise do nothing
+            self.env_fluxes_scaled = np.ones((self.size, len(self.org_exs)))  # initialize update rate (used to scale ex flux bounds
+            for model_idx in range(self.size):
+                self.env_fluxes_scaled[model_idx, :] = self.env_fluxes_scaled[model_idx, :] / self.rel_abund[model_idx]
+
         # simulate each organism
         for model_idx in range(self.size):
             if self.v: print(" Simulating model:", model_idx+1, " of ", self.size)
             # set media
-            self.set_env(model_idx, env_bounds[model_idx])
+            self.set_env(iter, model_idx)
 
             # simulate each org
-            self.sim_fba(model_idx, iter)
+            self.sim_fba(iter, model_idx)
 
         # check over consumption
-        self.check_overconsumption(iter, env_bounds)
+        self.check_overconsumption(iter)
 
         # once all orgs have been simulated without overconsumption, return to update_media
         return
 
-    def set_env(self, model_idx, env_bounds):
+    def set_env(self, iter, model_idx):
         """
         Function to set the exchange reactions of a model to match the environment fluxes
         for a given iteration and run. This is mainly provided to ensure a cleaner wrapper function.
@@ -159,11 +185,11 @@ class iifbaObject:
         for ex in self.models[model_idx].exchanges:
             mask = np.array(self.org_exs) == ex.id
             if mask.any():  # Check if the exchange reaction exists in org_exs
-                ex.lower_bound = -env_bounds[mask][0]
+                ex.lower_bound = -self.env_fluxes_scaled[model_idx, mask] * self.env_fluxes.loc[iter, 0][ex.id]
 
         return
-    
-    def sim_fba(self, model_idx, iter):
+
+    def sim_fba(self, iter, model_idx):
         """General function to run parsimonious FBA (pFBA) on a model and store the results.
         This function runs pFBA on a given model, checks if the solution is above a minimum growth objective,
         and stores the resulting fluxes in the provided DataFrame.
@@ -180,7 +206,7 @@ class iifbaObject:
         # do nothing otherwise - already initiated as zeros!
         return
     
-    def check_overconsumption(self, iter, adjusted_bounds):
+    def check_overconsumption(self, iter):
         """
         Check over-consumption of env. mets. If over-consumption occurs, 
         re-run flux function (recursive subroutine)
@@ -195,22 +221,26 @@ class iifbaObject:
 
         # check if environment fluxes are under-saturated
         is_overconsumed = np.zeros_like(total_org_flux)
-        is_overconsumed[env_tmp != 0] = -total_org_flux[np.abs(env_tmp) >= 1e-6] / env_tmp[np.abs(env_tmp) >= 1e-6]
+        is_overconsumed[env_tmp != 0] = -total_org_flux[np.abs(env_tmp) >= 1e-6].astype(np.long) / env_tmp[np.abs(env_tmp) >= 1e-6].astype(np.long) # only check non-zero env fluxes
 
         # check if iteration uses more flux than available in environment
         if is_overconsumed.max().round(ROUND) > 1:
             ex_over = np.argmax(is_overconsumed) # index of flux causing over-consumed
-            # adjust only over-consumed bound
-            # print(self.env_fluxes.columns[ex_over], "over-consumed by :", max(is_overconsumed))
-            # print("fnij*:", env_tmp[ex_over, -1])
-            # print("V'nij*:", run_exs[ex_over, :])
-            # print("fnij* dot V'nij*:", env_tmp[ex_over, -1]* run_exs[ex_over, :])
-            # print("V*nij*:", update_rate[:, ex_over])
-            adjusted_bounds[:, ex_over] = (env_tmp[ex_over, -1] * run_exs[ex_over, :] / (run_exs[ex_over, :] @ self.rel_abund)).T #
-            # print("V*nij*:", update_rate[:, ex_over])
 
+            if self.v: print(self.env_fluxes.columns[ex_over], "over-consumed by factor of", is_overconsumed.max().round(ROUND))
+
+            # adjust only over-consumed bound
+            for model_idx in range(self.size):
+                self.env_fluxes_scaled[model_idx, ex_over] = (run_exs[ex_over, model_idx] / (run_exs[ex_over, :].T @ self.rel_abund))
             # re-run flux function with adjusted bounds
-            if self.v: print("Re-running Optimization due to over-saturation of environment fluxes.")
-            self.flux_function(iter, adjusted_bounds)
+            self.is_rerun = True
+            self.flux_function(iter)
+        
 
         return
+    
+
+    def summarize(self, iter_shown=None):
+        self.summary = CommunitySummary(self, iter_shown)
+
+        return self.summary
