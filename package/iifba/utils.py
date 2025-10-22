@@ -108,50 +108,68 @@ def load_example_models():
 	return example_EC, example_BT, ecoli_media_example
 
 def load_simple_models(number):
-	situation_models = [
-		["sim1.json"],
-		["sim2.json"],
-		["sim3_0.json", "sim3_1.json"],
-		["sim4_0.json", "sim4_1.json"],
-		["sim5_0.json", "sim5_1.json"],
-		["sim6_0.json", "sim6_1.json"],
-		["sim7_0.json", "sim7_1.json"]
-	]
+	if number == "2b":
+		number = "2a"  # same models as 2a
+		
+	situation_models = {
+		"1a": ["sim1a.json"],
+		"1b": ["sim1b.json"],
+		"1c": ["sim1c_1.json", "sim1c_2.json"],
+		"2a": ["sim2a_1.json", "sim2a_2.json"],
+		"2c": ["sim2c_1.json", "sim2c_2.json"],
+		"3a": ["sim3a_1.json", "sim3a_2.json"],
+		"3b": ["sim3b_1.json", "sim3b_2.json"],
+		"3c": ["sim3c_1.json", "sim3c_2.json"]
+	}
 
 	situation_media = None
-	if number in [1,2,4,6,7]: # A only in media 
+	if number in ["1a", "1b", "2a", "2b", "2c", "3b", "3c"]: # A only in media 
 		situation_media = {"Ex_A": -10}
-	elif number in [3]:
+	elif number in ["1c"]:
 		situation_media = {"Ex_A": -10, "Ex_B": -10}
-	elif number in [5]:
+	elif number in ["3a"]:
 		situation_media = {"Ex_A": -10, "Ex_C": -10}
 	
 	models = []
-	for file_name in situation_models[number -1]:
+	for file_name in situation_models[number]:
 		model_path = files("iifba").joinpath("Simple_Models", file_name)
 		models.append(cb.io.load_json_model(str(model_path)))
 	
 	return models, situation_media
 
-def find_min_medium(community=None, models=None, min_growth=None):
+def find_min_medium(community=None, models=None, base_media=None, min_growth=None):
 	"""result = {k: max(dict1.get(k, float('-inf')), dict2.get(k, float('-inf')))
           for k in set(dict1) | set(dict2)}"""
 	
 	if community is not None:
-		if isinstance(community.media, (float, int)):
-			min_growth = community.media
-		else:
-			min_growth = 0.1
+		if isinstance(community.media, (list)):
+			base_media = community.media[0]
+			min_growth = community.media[1]
 		
 		models = community.models
 	else:
+		models = models
+		base_media = base_media
 		min_growth = min_growth if min_growth is not None else 0.1
 
 	min_medium = []
 	for model in models:
-		model_min_med = cb.medium.minimal_medium(model, min_growth).to_dict()
-		min_medium.append(pd.Series(model_min_med))
+		with model as model_t:
+			for rxn_id, uptake in base_media.items():
+				if rxn_id in model_t.exchanges:
+					met = list(model_t.exchanges.get_by_id(rxn_id).metabolites.keys())[0]
+					model_t.add_boundary(met, type="sink", reaction_id=rxn_id+'_tmp',lb=-1*uptake,ub=1000)
+				
+			for ex in model_t.exchanges:
+				ex.lower_bound = -1000
+				ex.upper_bound = 1000
 
+			mm = cb.medium.minimal_medium(model_t, min_growth,minimize_components=True)
+
+			model_min_med = mm.to_dict()
+			min_medium.append(pd.Series(model_min_med))
+	min_medium.append(pd.Series(base_media)) # add base media to ensure all components are included
+	
 	min_medium = pd.concat(min_medium, axis=1).fillna(0)
 	min_medium = (- 1* min_medium.max(axis=1)).to_dict() # convert to uptake and dict
 
@@ -200,7 +218,7 @@ def check_media(community):
 		else:
 			raise ValueError("Media must be None, 'complete', float, or a dict with reaction IDs as keys and flux values as values.")
 	
-	if isinstance(community.media, (int, float)):
+	if isinstance(community.media, (list)):
 		community.media = find_min_medium(community)
 	elif not isinstance(community.media, (dict, str)):
 		raise ValueError("Media must be None, 'complete', float, or a dict with reaction IDs as keys and flux values as values.")

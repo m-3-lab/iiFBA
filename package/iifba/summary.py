@@ -118,8 +118,10 @@ class CommunitySummary:
         self.cyto_edge = self.cyto_edge[["Source", "Target", "Type", "Value"]]
 
         # create cytoscape node table
-        self.cyto_node = self.cyto_edge[["Source", "Target"]]
-        self.cyto_node["Type"] = ["Organism" if name in self.community.model_names.values() else "Metabolite" for name in self.cyto_node["Source"]]
+        self.cyto_node = pd.DataFrame()
+        self.cyto_node["ID"] = pd.concat([self.cyto_edge["Source"], self.cyto_edge["Target"]]).unique()
+        self.cyto_node["Name"] = [self.community.metid_to_name.get(id, id) for id in self.cyto_node["ID"]]
+        self.cyto_node["Type"] = ["Organism" if id in self.community.model_names.values() else "Metabolite" for id in self.cyto_node["ID"]]
 
         return self.cyto_edge, self.cyto_node
 
@@ -139,9 +141,9 @@ class CommunitySummary:
 
         for model in self.flux.index.get_level_values(0).unique():
             output.append("-----------------------------------------------------------------\n")
-            output.append(f"Model {model} Summary:\n")
+            output.append(f"{self.community.model_names[model]} (Model {model}) Summary:\n")
             output.append(f"{self.objective_expressions[model]}\n\n")
-            output.append(f"Model {model} Uptake:\n")
+            output.append(f"{self.community.model_names[model]} Uptake:\n")
             uptake = self.flux.loc[model][self.flux.loc[model]['Flux'] < 0].copy()
             uptake["Flux"] = uptake["Flux"].abs()
             output.append(f"{uptake.reset_index().to_string(index=False)}\n\n")
@@ -184,7 +186,7 @@ class CommunitySummary:
 
         # Organism-level tables
         for model in self.flux.index.get_level_values(0).unique().sort_values():
-            html += f"<hr><h4>Model {model} Summary</h4>"
+            html += f"<hr><h4>{self.community.model_names[model]} (Model {model}) Summary</h4>"
             html += f"{self.objective_expressions[model]}<br>"
 
             # Organism Uptake Table

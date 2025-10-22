@@ -7,7 +7,101 @@ from .config import GROWTH_MIN_OBJ, ROUND
 from .summary import CommunitySummary
 
 class iifbaObject:
+    """_summary_
+
+    Attributes:
+        models: List[cobra.Model], (n_organisms_or_models, )
+            A list of cobra.Model objects.
+        media: Dict[str: float] 
+            The media conditions for the models.
+        rel_abund: np.ndarray[float], (n_organisms_or_models, 1)
+            The relative abundance of the models, stored as a column vector. 
+        id: str, (optional, default=None)
+            An optional identifier for the iiFBA analysis.
+        size: int 
+            The number of models in the community. Length of models list.
+        objective_rxns: Dict[int: str]
+            A dictionary mapping model indices to their objective reaction IDs.
+        iters: int
+            The number of iterations to run the iiFBA analysis.
+        method: str (optional, default="pfba")
+            The method to use for flux balance analysis ("fba" or "pfba").
+        early_stop: bool (optional, default=True)
+            A boolean indicating whether to stop early if convergence is reached.
+        v: bool (optional, default=False)
+            A boolean indicating whether to print verbose output.
+        m_vals: List[int], (2, ) (optional, default=[1,1])
+            A list containing two integers that define the number of sample points and 
+            start points for different runs per iteration. This variable is mainly 
+            used for sampling via iifba_sampling, and should remain [1,1] for standard 
+            iiFBA.
+        ex_to_met: Dict[str: str] 
+            A dictionary mapping exchange reaction IDs to metabolite IDs.
+        metid_to_name: Dict[str: str]
+            A dictionary mapping metabolite IDs to their human readable names.
+        exchange_metabolites: List[str]
+            A list of all unique exchange metabolite IDs across the models. This is 
+            a redundant variable, containing all values of ex_to_met.
+        exchanges: List[str]
+            A list of all unique exchange reaction IDs across the models.
+        org_exs: List[str]
+            A list of all unique exchange reaction IDs across the models.
+        org_rxns: List[str]
+            A list of all unique reaction IDs across the models.
+        env_fluxes: pd.DataFrame, (n_iterations * m_vals[0] * m_vals[1] + 1, n_exchanges)
+            A DataFrame storing the environmental fluxes for each iteration and run. Dataframe
+            index is multi-indexed by iteration & run (iiFBA drops run index, only necessary
+            for sampling). Columns are unique exchange reaction IDs for the entire community.
+        org_fluxes: pd.DataFrame, (n_iterations * m_vals[0] * m_vals[1] * n_orgs, n_reactions)
+            A DataFrame storing the fluxes of all reactions for each model, iteration, and run. 
+            Dataframe index is multi-indexed by model, iteration, and run (iiFBA drops run index,
+            only necessary for sampling). Columns are unique reaction IDs for the entire community.
+        model_names: Dict[int: str]
+            A dictionary mapping model indices to their names.
+        summary: CommunitySummary
+            A CommunitySummary object summarizing the results of the iiFBA analysis, see 
+            CommunitySummary for more details.
+
+    Methods:
+        __init__(self, models, media, rel_abund="equal", id=None):
+            Initializes the iifbaObject with the given parameters.
+        
+        run_iifba(self, iters, method, early_stop=True, v=False):
+            Runs the iiFBA analysis for a specified number of iterations using the chosen method.
+        
+        create_vars(self, m_vals=[1,1]):
+            Initializes variables for the community iiFBA analysis and interpretation. This includes
+            setting up DataFrames for environmental and organism fluxes, as well as storing model
+            names and reaction mappings.
+
+        update_media(self, iter):
+            Updates the media conditions for each iteration based on the fluxes of the models. This 
+            method wraps around the _flux_function and handles the media update logic.
+
+        _flux_function(self, iter):
+            Runs the flux function for each model in the community for the given iteration. This method
+            wraps around the _set_env & _sim_fba methods and handles the overconsumption check.
+
+        _set_env(self, iter, model_idx):
+            Sets the exchange reactions of a model to match the environment fluxes for a given iteration and
+            model index. This is mainly provided to ensure a cleaner wrapper function.
+
+        _sim_fba(self, iter, model_idx):
+            Runs Basic FBA or parsimonious FBA (pFBA) on a model and stores the resulting
+            fluxes in the org_fluxes DataFrame. If the model's objective value is below a minimum
+             threshold (entailing no growth), the fluxes are not updated (remain zero).
+
+        _check_overconsumption(self, iter):
+            Checks for over-consumption of environmental metabolites, scales down overconsumed reactions, and
+            re-runs the flux function if necessary.
+        
+        summarize(self, iter_shown=None):
+            Summarizes the results of the iiFBA analysis in a CommunitySummary object, formatted to match
+            a COBRApy model summary. Also formatting iteration information for a cytoscape-compatible
+            node/edge table. 
+    """
     def __init__(self, models, media, rel_abund="equal", id=None):
+        
         self.models = utils.check_models(models)
         self.media = media
         self.media = utils.check_media(self)
@@ -25,8 +119,16 @@ class iifbaObject:
 
     def run_iifba(self, iters, method, early_stop=True, v=False):
         """_summary_
-        Run the iifba algorithm
 
+        Args:
+            iters (_type_): _description_
+            method (_type_): _description_
+            early_stop (bool, optional): _description_. Defaults to True.
+            v (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            env_fluxes: _description_
+            org_fluxes: _description_
         """
         self.iters = utils.check_iters(iters)
         self.method = utils.check_method(method)
@@ -41,8 +143,8 @@ class iifbaObject:
             if self.v: print("Iteration:", iter)
 
             # update media for the iteration
-            self.is_rerun = False # reset re-run flag for overconsumption
-            self.update_media(iter)
+            self._is_rerun = False # reset re-run flag for overconsumption
+            self._update_media(iter)# maybe change name
 
             # check early stopping condition
             if self.early_stop:
@@ -57,6 +159,7 @@ class iifbaObject:
 
         # drop run col
         self.org_fluxes = self.org_fluxes.droplevel("Run")
+        self.env_fluxes = self.env_fluxes.droplevel("Run")
 
         return self.env_fluxes, self.org_fluxes
 
@@ -69,6 +172,7 @@ class iifbaObject:
 
         # get list of all unique rxns and exchanges
         self.ex_to_met = {}
+        self.metid_to_name = {}
         self.exchange_metabolites = []
         self.exchanges = []
         self.org_exs = set()
@@ -86,6 +190,7 @@ class iifbaObject:
                 mets = list(rxn.metabolites.keys())
                 if len(mets) == 1:
                     self.ex_to_met[rxn.id] = mets[0].id if pd.notnull(mets[0].id) else rxn.id
+                    self.metid_to_name[mets[0].id] = mets[0].name if pd.notnull(mets[0].name) else mets[0].id
                     self.exchange_metabolites.extend(mets)
                     self.exchanges.append(rxn.id)
         
@@ -97,7 +202,7 @@ class iifbaObject:
 
         # initialize env
         self.media = utils.check_media(self)
-        rows = (self.iters) * self.m_vals[0] * self.m_vals[1] + 1 # add one iteration for final env
+        rows = (self.iters) * self.m_vals[0] * self.m_vals[1] + 1 # add one iteration for initial env
         cols = len(self.org_exs)
         self.env_fluxes = np.zeros((rows, cols))
         env0_masks = [np.array(self.org_exs) == rxn_id for rxn_id in list(self.media.keys())]
@@ -132,7 +237,7 @@ class iifbaObject:
         return
         
 
-    def update_media(self, iter ):
+    def _update_media(self, iter ):
         """
         Update the media (f_n,j) for each iteration
         f_{n+1, j} = f_{n,j} + sum(V_{n,i,j})
@@ -140,7 +245,7 @@ class iifbaObject:
 
 
         # run organism flux function
-        self.flux_function(iter)
+        self._flux_function(iter)
 
         # update media: f_n+1 = f_n - sum(v_nij)
         env_tmp = self.env_fluxes.loc[iter, 0][:].to_numpy().reshape(-1, 1)   # (row, col) = (n_ex, 1)     # uptake = positive
@@ -152,32 +257,32 @@ class iifbaObject:
 
         return
 
-    def flux_function(self, iter):
+    def _flux_function(self, iter):
         """
         run through flux function for organisms
         """
         # # define env bounds per organism for the current iteration
-        if not(self.is_rerun): # if first run of iteration, just initialize scaled by rel abund only otherwise do nothing
-            self.env_fluxes_scaled = np.ones((self.size, len(self.org_exs)))  # initialize update rate (used to scale ex flux bounds
+        if not(self._is_rerun): # if first run of iteration, just initialize scaled by rel abund only otherwise do nothing
+            self._env_scaling_factors = np.ones((self.size, len(self.org_exs)))  # initialize update rate (used to scale ex flux bounds
             for model_idx in range(self.size):
-                self.env_fluxes_scaled[model_idx, :] = self.env_fluxes_scaled[model_idx, :] / self.rel_abund[model_idx]
+                self._env_scaling_factors[model_idx, :] = self._env_scaling_factors[model_idx, :] / self.rel_abund[model_idx]
 
         # simulate each organism
         for model_idx in range(self.size):
             if self.v: print(" Simulating model:", model_idx+1, " of ", self.size)
             # set media
-            self.set_env(iter, model_idx)
+            self._set_env(iter, model_idx)
 
             # simulate each org
-            self.sim_fba(iter, model_idx)
+            self._sim_fba(iter, model_idx)
 
         # check over consumption
-        self.check_overconsumption(iter)
+        self._check_overconsumption(iter)
 
         # once all orgs have been simulated without overconsumption, return to update_media
         return
 
-    def set_env(self, iter, model_idx):
+    def _set_env(self, iter, model_idx):
         """
         Function to set the exchange reactions of a model to match the environment fluxes
         for a given iteration and run. This is mainly provided to ensure a cleaner wrapper function.
@@ -185,11 +290,11 @@ class iifbaObject:
         for ex in self.models[model_idx].exchanges:
             mask = np.array(self.org_exs) == ex.id
             if mask.any():  # Check if the exchange reaction exists in org_exs
-                ex.lower_bound = -self.env_fluxes_scaled[model_idx, mask] * self.env_fluxes.loc[iter, 0][ex.id]
+                ex.lower_bound = -self._env_scaling_factors[model_idx, mask] * self.env_fluxes.loc[iter, 0][ex.id]
 
         return
 
-    def sim_fba(self, iter, model_idx):
+    def _sim_fba(self, iter, model_idx):
         """General function to run parsimonious FBA (pFBA) on a model and store the results.
         This function runs pFBA on a given model, checks if the solution is above a minimum growth objective,
         and stores the resulting fluxes in the provided DataFrame.
@@ -206,7 +311,7 @@ class iifbaObject:
         # do nothing otherwise - already initiated as zeros!
         return
     
-    def check_overconsumption(self, iter):
+    def _check_overconsumption(self, iter):
         """
         Check over-consumption of env. mets. If over-consumption occurs, 
         re-run flux function (recursive subroutine)
@@ -231,10 +336,10 @@ class iifbaObject:
 
             # adjust only over-consumed bound
             for model_idx in range(self.size):
-                self.env_fluxes_scaled[model_idx, ex_over] = (run_exs[ex_over, model_idx] / (run_exs[ex_over, :].T @ self.rel_abund))
+                self._env_scaling_factors[model_idx, ex_over] = (run_exs[ex_over, model_idx] / (run_exs[ex_over, :].T @ self.rel_abund))
             # re-run flux function with adjusted bounds
-            self.is_rerun = True
-            self.flux_function(iter)
+            self._is_rerun = True
+            self._flux_function(iter)
         
 
         return
