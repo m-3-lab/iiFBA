@@ -21,6 +21,10 @@ iifba/Simple_Models/sim2a_1.json
 iifba/Simple_Models/sim2a_2.json
 iifba/Simple_Models/sim2c_1.json
 iifba/Simple_Models/sim2c_2.json
+iifba/Simple_Models/sim2d_1.json
+iifba/Simple_Models/sim2d_2.json
+iifba/Simple_Models/sim2e_1.json
+iifba/Simple_Models/sim2e_2.json
 iifba/Simple_Models/sim3a_1.json
 iifba/Simple_Models/sim3a_2.json
 iifba/Simple_Models/sim3b_1.json

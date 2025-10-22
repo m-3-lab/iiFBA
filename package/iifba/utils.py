@@ -117,13 +117,15 @@ def load_simple_models(number):
 		"1c": ["sim1c_1.json", "sim1c_2.json"],
 		"2a": ["sim2a_1.json", "sim2a_2.json"],
 		"2c": ["sim2c_1.json", "sim2c_2.json"],
+		"2d": ["sim2d_1.json", "sim2d_2.json"],
+		"2e": ["sim2e_1.json", "sim2e_2.json"],
 		"3a": ["sim3a_1.json", "sim3a_2.json"],
 		"3b": ["sim3b_1.json", "sim3b_2.json"],
 		"3c": ["sim3c_1.json", "sim3c_2.json"]
 	}
 
 	situation_media = None
-	if number in ["1a", "1b", "2a", "2b", "2c", "3b", "3c"]: # A only in media 
+	if number in ["1a", "1b", "2a", "2b", "2c", "2d", "2e", "3b", "3c"]: # A only in media 
 		situation_media = {"Ex_A": -10}
 	elif number in ["1c"]:
 		situation_media = {"Ex_A": -10, "Ex_B": -10}
