@@ -134,7 +134,7 @@ def load_simple_models(number):
 	elif number in ["3a"]:
 		situation_media = {"Ex_A": -10, "Ex_C": -10}
 	elif number in ["4a"]:
-		situation_media = {"Ex_A": -10, "Ex_D": -10}
+		situation_media = {"Ex_A": -10, "Ex_B": -10, "Ex_D": -10}
 	
 	models = []
 	for file_name in situation_models[number]:

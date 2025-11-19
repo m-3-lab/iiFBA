@@ -150,7 +150,7 @@
 "B_e0":1,
 "B_e1":-2.0
 },
-"lower_bound":0,
+"lower_bound":-1000,
 "upper_bound":1000.0,
 "gene_reaction_rule":""
 },
@@ -161,7 +161,7 @@
 "C_e0":1,
 "C_e1":-2.0
 },
-"lower_bound":0,
+"lower_bound":-1000,
 "upper_bound":1000.0,
 "gene_reaction_rule":""
 },
@@ -172,7 +172,7 @@
 "D_e0":1,
 "D_e1":-2.0
 },
-"lower_bound":0,
+"lower_bound":-1000,
 "upper_bound":1000.0,
 "gene_reaction_rule":""
 },
@@ -262,7 +262,7 @@
 "bio1_e0":1,
 "bio1_e1":-2.0
 },
-"lower_bound":0,
+"lower_bound":-1000,
 "upper_bound":1000.0,
 "gene_reaction_rule":""
 },
@@ -284,7 +284,7 @@
 "B_e0":1,
 "B_e2":-2.0
 },
-"lower_bound":0,
+"lower_bound":-1000,
 "upper_bound":1000.0,
 "gene_reaction_rule":""
 },
@@ -295,7 +295,7 @@
 "C_e0":1,
 "C_e2":-2.0
 },
-"lower_bound":0,
+"lower_bound":-1000,
 "upper_bound":1000.0,
 "gene_reaction_rule":""
 },
@@ -306,7 +306,7 @@
 "D_e0":1,
 "D_e2":-2.0
 },
-"lower_bound":0,
+"lower_bound":-1000,
 "upper_bound":1000.0,
 "gene_reaction_rule":""
 },
@@ -395,7 +395,7 @@
 "bio2_e0":1,
 "bio2_e2":-2.0
 },
-"lower_bound":0,
+"lower_bound":-1000,
 "upper_bound":1000.0,
 "gene_reaction_rule":""
 },
