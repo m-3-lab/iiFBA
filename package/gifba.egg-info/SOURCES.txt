@@ -30,3 +30,5 @@ gifba/Simple_Models/sim3b_1.json
 gifba/Simple_Models/sim3b_2.json
 gifba/Simple_Models/sim3c_1.json
 gifba/Simple_Models/sim3c_2.json
+gifba/Simple_Models/sim4a_1.json
+gifba/Simple_Models/sim4a_2.json
